@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:loop_app/core/theme/app_colors.dart';
+import 'package:loop_app/core/theme/app_widgets.dart';
 import 'package:loop_app/features/auth/login_screen.dart';
 import 'package:loop_app/features/home/home_screen.dart';
 import 'package:loop_app/features/home/premium_home_screen.dart';
@@ -30,12 +32,15 @@ class LoopApp extends StatelessWidget {
         // 기본 폰트를 구글 폰트(Noto Sans)로 설정 (나중에 Pretendard로 교체 가능)
         textTheme: GoogleFonts.notoSansTextTheme(ThemeData.dark().textTheme),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.white, // 무채색(화이트) 시드 -> 흑백 테마 생성
+          seedColor: AppColors.cyan, // 시안 시드 -> 시스템 액센트(커서/포커스) 일치
           brightness: Brightness.dark,
+          primary: AppColors.cyan,
           surface: const Color(0xFF17171C), // 카드나 바텀시트 배경색 (살짝 밝은 검정)
         ),
-        scaffoldBackgroundColor: const Color(0xFF101010), // 리얼 블랙 배경
+        scaffoldBackgroundColor: AppColors.page, // 폰 프레임 안 배경
       ),
+      // 모든 라우트를 폰 프레임 안에서 렌더/전환 (웹 미리보기 폰 재현).
+      builder: (context, child) => PhoneFrame(child: child ?? const SizedBox.shrink()),
       // [Preview] 새 프리미엄 홈 디자인을 바로 보여주기 위해 임시로 랜딩.
       // 인증 흐름으로 되돌리려면 아래 home 한 줄을 지우고 _authGate() 주석을 풀면 됩니다.
       home: const PremiumHomeScreen(),

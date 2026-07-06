@@ -1,85 +1,88 @@
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:loop_app/core/theme/app_colors.dart';
+import 'package:loop_app/core/theme/app_widgets.dart';
+
+/// 내 QR (새 테마). 매장에 보여주는 결제용 코드.
 class MyQrScreen extends StatelessWidget {
   const MyQrScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // 현재 로그인한 사용자의 고유 ID 가져오기
     final user = Supabase.instance.client.auth.currentUser;
-    final userId = user?.id ?? '';
+    final data = (user?.id.isNotEmpty ?? false) ? user!.id : 'LOOP-DEMO-USER';
 
     return Scaffold(
-      extendBodyBehindAppBar: true, // 앱바 뒤로 내용이 확장되어 정중앙 배치 가능
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0), // [UI Update] 닫기 버튼 여백 확보
-          child: IconButton(
-            icon: const Icon(Icons.close),
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-            hoverColor: Colors.transparent,
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ),
-      ),
-      body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+      backgroundColor: AppColors.page,
+      body: Stack(
+        children: [
+          const GlowBackground(),
+          Column(
             children: [
-              Text(
-                '결제 시 매장 직원에게\n이 코드를 보여주세요',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.notoSans(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 1.4,
+              LoopTopBar(title: '내 QR', leadingIcon: PhosphorIcons.x()),
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('결제 시 매장 직원에게\n이 코드를 보여주세요',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white, height: 1.4)),
+                      const SizedBox(height: 40),
+                      Container(
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(color: AppColors.cyan.withOpacity(0.25), blurRadius: 50, spreadRadius: -6),
+                          ],
+                        ),
+                        child: QrImageView(
+                          data: data,
+                          version: QrVersions.auto,
+                          size: 220,
+                          backgroundColor: Colors.white,
+                          eyeStyle: const QrEyeStyle(
+                            eyeShape: QrEyeShape.square,
+                            color: Color(0xFF0A0A0C),
+                          ),
+                          dataModuleStyle: const QrDataModuleStyle(
+                            dataModuleShape: QrDataModuleShape.square,
+                            color: Color(0xFF0A0A0C),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.cyan.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: AppColors.cyan.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(PhosphorIcons.shieldCheck(), size: 14, color: AppColors.cyan),
+                            const SizedBox(width: 6),
+                            const Text('보안 결제 코드',
+                                style: TextStyle(color: AppColors.cyan300, fontSize: 12, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Gap(40),
-              // QR 코드 카드
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 실제 QR 코드 생성 (내 ID 포함)
-                    QrImageView(
-                      data: userId, // 스캔 시 이 ID가 읽힘
-                      version: QrVersions.auto,
-                      size: 200.0,
-                      backgroundColor: Colors.white,
-                    ),
-                  ],
-                ),
-              ),
-              const Gap(40),
-              Text(
-                '상대방이 스캔할 때까지\n화면을 켜두세요',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[500], fontSize: 14),
               ),
             ],
           ),
-        ),
+        ],
+      ),
     );
   }
 }

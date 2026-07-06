@@ -9,6 +9,8 @@ import 'package:loop_app/features/home/tabs/benefit_tab.dart';
 import 'package:loop_app/features/home/tabs/invest_tab.dart';
 import 'package:loop_app/features/home/tabs/menu_tab.dart';
 import 'package:loop_app/features/home/tabs/merchant_tab.dart';
+import 'package:loop_app/features/history/history_screen.dart';
+import 'package:loop_app/features/menu/notifications_screen.dart';
 import 'package:loop_app/features/payment/my_qr_screen.dart';
 import 'package:loop_app/features/payment/qr_payment_screen.dart';
 import 'package:loop_app/features/transfer/transfer_search_screen.dart';
@@ -104,6 +106,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     });
   }
 
+  void _openHistory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const HistoryScreen()),
+    );
+  }
+
   // 인덱스 → 탭 위젯
   Widget _getPage(int index) {
     switch (index) {
@@ -122,80 +130,48 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    // 폰 프레임/홈 인디케이터는 앱 레벨(PhoneFrame)에서 처리한다.
     return Scaffold(
-      backgroundColor: AppColors.black,
-      body: Center(
-        child: FittedBox(
-          fit: BoxFit.contain,
-          child: Container(
-            width: 400,
-            height: 867,
-            decoration: BoxDecoration(
-              color: AppColors.page,
-              borderRadius: BorderRadius.circular(40),
-              border: Border.all(color: Colors.white.withOpacity(0.10), width: 0.5),
+      backgroundColor: AppColors.page,
+      body: Stack(
+        children: [
+          _buildBackgroundGlow(),
+          // 탭 전환: 방향성 슬라이드 + 페이드 (옛 홈 화면 전환감 그대로)
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutQuad,
+            switchOutCurve: Curves.easeInQuad,
+            transitionBuilder: (child, animation) {
+              final isNew = child.key == ValueKey(_selectedIndex);
+              final movingRight = _selectedIndex > _previousIndex;
+              final start = movingRight
+                  ? (isNew ? 0.08 : -0.08)
+                  : (isNew ? -0.08 : 0.08);
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: Offset(start, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              );
+            },
+            layoutBuilder: (currentChild, previousChildren) => Stack(
+              fit: StackFit.expand,
+              children: [
+                ...previousChildren,
+                if (currentChild != null) currentChild,
+              ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(40),
-              child: Stack(
-                children: [
-                  _buildBackgroundGlow(),
-                  // 탭 전환: 방향성 슬라이드 + 페이드 (옛 홈 화면 전환감 그대로)
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    switchInCurve: Curves.easeOutQuad,
-                    switchOutCurve: Curves.easeInQuad,
-                    transitionBuilder: (child, animation) {
-                      final isNew = child.key == ValueKey(_selectedIndex);
-                      final movingRight = _selectedIndex > _previousIndex;
-                      final start = movingRight
-                          ? (isNew ? 0.08 : -0.08)
-                          : (isNew ? -0.08 : 0.08);
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: Offset(start, 0),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      );
-                    },
-                    layoutBuilder: (currentChild, previousChildren) => Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        ...previousChildren,
-                        if (currentChild != null) currentChild,
-                      ],
-                    ),
-                    child: KeyedSubtree(
-                      key: ValueKey(_selectedIndex),
-                      child: _getPage(_selectedIndex),
-                    ),
-                  ),
-                  _buildBottomNav(),
-                  // 홈 인디케이터 바
-                  Positioned(
-                    bottom: 8,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: Container(
-                        width: 400 / 3,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.20),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            child: KeyedSubtree(
+              key: ValueKey(_selectedIndex),
+              child: _getPage(_selectedIndex),
             ),
           ),
-        ),
+          _buildBottomNav(),
+        ],
       ),
     );
   }
@@ -311,26 +287,62 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               ),
             ],
           ),
-          _Pressable(
-            onTap: () => _select(4),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.glassFill,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.glassBorder, width: 1),
-                  ),
-                  child: Icon(PhosphorIcons.user(), size: 20, color: AppColors.gray300),
+          Row(
+            children: [
+              // 알림
+              _Pressable(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                ),
+                child: Stack(
+                  children: [
+                    _headerCircle(PhosphorIcons.bell()),
+                    Positioned(
+                      right: 9,
+                      top: 9,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: AppColors.cyan,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.page, width: 1.5),
+                          boxShadow: [BoxShadow(color: AppColors.cyan.withOpacity(0.8), blurRadius: 6)],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(width: 10),
+              // 프로필 → 전체 탭
+              _Pressable(
+                onTap: () => _select(4),
+                child: _headerCircle(PhosphorIcons.user()),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  // 헤더 우측 글래스 원형 버튼 (알림/프로필)
+  Widget _headerCircle(IconData icon) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.glassFill,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.glassBorder, width: 1),
+          ),
+          child: Icon(icon, size: 20, color: AppColors.gray300),
+        ),
       ),
     );
   }
@@ -516,12 +528,16 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     color: AppColors.gray500,
                   ),
                 ),
-                Text(
-                  '더보기',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.cyan.withOpacity(0.7),
+                GestureDetector(
+                  onTap: _openHistory,
+                  behavior: HitTestBehavior.opaque,
+                  child: Text(
+                    '더보기',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.cyan.withOpacity(0.7),
+                    ),
                   ),
                 ),
               ],
@@ -532,7 +548,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               padding: EdgeInsets.zero,
               physics: const BouncingScrollPhysics(),
               itemCount: _activities.length,
-              itemBuilder: (context, i) => _ActivityRow(activity: _activities[i]),
+              itemBuilder: (context, i) => _ActivityRow(
+                activity: _activities[i],
+                onTap: _openHistory,
+              ),
             ),
           ),
         ],
@@ -848,12 +867,15 @@ class _EarnButton extends StatelessWidget {
 /// 최근 활동 한 줄
 class _ActivityRow extends StatelessWidget {
   final _Activity activity;
-  const _ActivityRow({required this.activity});
+  final VoidCallback? onTap;
+  const _ActivityRow({required this.activity, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final isReward = activity.kind == _ActivityKind.reward;
-    return Padding(
+    return _Pressable(
+      onTap: onTap,
+      child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 14),
       child: Row(
         children: [
@@ -910,6 +932,7 @@ class _ActivityRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

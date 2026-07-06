@@ -4,11 +4,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:loop_app/core/theme/app_colors.dart';
 import 'package:loop_app/core/theme/app_widgets.dart';
-import 'package:loop_app/features/history/transaction_history_screen.dart';
+import 'package:loop_app/features/auth/login_screen.dart';
+import 'package:loop_app/features/history/history_screen.dart';
+import 'package:loop_app/features/menu/notifications_screen.dart';
+import 'package:loop_app/features/menu/profile_screen.dart';
+import 'package:loop_app/features/menu/settings_screen.dart';
 
-/// 전체 메뉴 탭 — 내 정보 / 거래내역 / 설정 / 고객센터 + 로그아웃 (새 테마).
+/// 전체 메뉴 탭 (새 테마).
 class MenuTab extends StatelessWidget {
   const MenuTab({super.key});
+
+  void _push(BuildContext context, Widget page) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,17 +29,23 @@ class MenuTab extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(28, 4, 28, 110),
             physics: const BouncingScrollPhysics(),
             children: [
-              _item(context, PhosphorIcons.user(), '내 정보'),
-              _item(context, PhosphorIcons.clockCounterClockwise(), '거래 내역', onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const TransactionHistoryScreen()),
-                );
-              }),
-              _item(context, PhosphorIcons.gearSix(), '설정'),
-              _item(context, PhosphorIcons.headset(), '고객센터'),
+              _item(context, PhosphorIcons.user(), '내 정보', () => _push(context, const ProfileScreen())),
+              _item(context, PhosphorIcons.clockCounterClockwise(), '거래 내역',
+                  () => _push(context, const HistoryScreen())),
+              _item(context, PhosphorIcons.bell(), '알림', () => _push(context, const NotificationsScreen())),
+              _item(context, PhosphorIcons.gearSix(), '설정', () => _push(context, const SettingsScreen())),
+              _item(context, PhosphorIcons.headset(), '고객센터',
+                  () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('고객센터 (준비 중)')),
+                      )),
               const SizedBox(height: 24),
               GestureDetector(
-                onTap: () => Supabase.instance.client.auth.signOut(),
+                onTap: () async {
+                  await Supabase.instance.client.auth.signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
+                  }
+                },
                 behavior: HitTestBehavior.opaque,
                 child: const Padding(
                   padding: EdgeInsets.symmetric(vertical: 14),
@@ -47,12 +61,11 @@ class MenuTab extends StatelessWidget {
     );
   }
 
-  Widget _item(BuildContext context, IconData icon, String title, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+  Widget _item(BuildContext context, IconData icon, String title, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Pressable(
+        onTap: onTap,
         child: GlassContainer(
           radius: 18,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),

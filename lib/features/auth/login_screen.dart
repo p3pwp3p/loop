@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
+
+import 'package:loop_app/core/theme/app_colors.dart';
+import 'package:loop_app/core/theme/app_widgets.dart';
 import 'package:loop_app/features/auth/identity_verification_screen.dart';
 import 'package:loop_app/features/auth/sign_in_screen.dart';
 import 'package:loop_app/features/home/loop_logo.dart';
 
+/// 로그인 진입 (새 테마). 궤도 로고 + 시안 액센트.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -13,16 +17,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    // 10초에 한 바퀴 회전 (아주 천천히, 우아하게)
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 10),
-    )..repeat();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat();
   }
 
   @override
@@ -34,148 +34,112 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 배경색은 app.dart 테마에서 설정한 색상(회색조)을 따름
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Spacer(),
-              // 로고 및 앱 이름 영역
-              Center(
-                child: Column(
-                  children: [
-                    // Loop 브랜드 로고
-                    AnimatedBuilder(
-                      animation: _controller,
-                      builder: (context, child) {
-                        return LoopLogo(size: 80, animationValue: _controller.value);
-                      },
-                    ),
-                    const Gap(24),
-                    Text(
-                      'LOOP',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white, // 다크 테마용 흰색
-                      ),
-                    ),
-                    const Gap(8),
-                    Text(
-                      '금융의 모든 것을 잇다',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[400], // 어두운 배경에서 잘 보이도록 밝은 회색으로 변경
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              // 로그인 버튼 영역
-              _LoginButton(
-                text: '카카오로 시작하기',
-                textColor: const Color(0xFF191F28),
-                backgroundColor: const Color(0xFFFEE500), // 카카오 옐로우
-                icon: Icons.chat_bubble, // 카카오 아이콘 대신 말풍선 아이콘
-                onPressed: () {
-                  // TODO: 카카오 로그인 로직 연결
-                },
-              ),
-              const Gap(12),
-              _LoginButton(
-                text: '이메일로 시작하기',
-                textColor: Colors.white,
-                backgroundColor: const Color(0xFF3182F6), // 브랜드 블루
-                icon: Icons.email_rounded,
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const IdentityVerificationScreen(),
-                    ),
-                  );
-                },
-              ),
-              const Gap(24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+      backgroundColor: AppColors.page,
+      body: Stack(
+        children: [
+          const GlowBackground(),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    '이미 회원가입을 하셨나요? ',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 14),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const SignInScreen()),
-                      );
-                    },
-                    child: const Text(
-                      '로그인',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
-                        decorationColor: Colors.white,
-                      ),
+                  const Spacer(flex: 3),
+                  Center(
+                    child: Column(
+                      children: [
+                        AnimatedBuilder(
+                          animation: _controller,
+                          builder: (context, _) => LoopLogo(size: 84, animationValue: _controller.value),
+                        ),
+                        const SizedBox(height: 28),
+                        Text(
+                          'LOOP',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 4,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          '자산과 혜택의 무한 순환',
+                          style: TextStyle(fontSize: 15, color: AppColors.gray400, fontWeight: FontWeight.w500),
+                        ),
+                      ],
                     ),
                   ),
+                  const Spacer(flex: 4),
+                  _authButton(
+                    text: '카카오로 시작하기',
+                    bg: const Color(0xFFFEE500),
+                    fg: const Color(0xFF191F28),
+                    icon: PhosphorIcons.chatCircle(PhosphorIconsStyle.fill),
+                    onTap: () {},
+                  ),
+                  const SizedBox(height: 12),
+                  _authButton(
+                    text: '이메일로 시작하기',
+                    bg: AppColors.cyan,
+                    fg: AppColors.onCyan,
+                    icon: PhosphorIcons.envelopeSimple(),
+                    glow: true,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const IdentityVerificationScreen()),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('이미 회원이신가요? ',
+                          style: TextStyle(color: AppColors.gray400, fontSize: 14)),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SignInScreen()),
+                        ),
+                        child: const Text('로그인',
+                            style: TextStyle(
+                                color: AppColors.cyan, fontWeight: FontWeight.bold, fontSize: 14)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
                 ],
               ),
-              const Gap(48), // 하단 여백
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// 중복되는 버튼 스타일을 위젯으로 분리 (재사용성 UP)
-class _LoginButton extends StatelessWidget {
-  final String text;
-  final Color textColor;
-  final Color backgroundColor;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  const _LoginButton({
-    required this.text,
-    required this.textColor,
-    required this.backgroundColor,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: backgroundColor,
-        foregroundColor: textColor,
-        elevation: 0, // 그림자 제거 (플랫 디자인)
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 20),
-          const Gap(8),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _authButton({
+    required String text,
+    required Color bg,
+    required Color fg,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool glow = false,
+  }) {
+    return Pressable(
+      onTap: onTap,
+      child: Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: glow ? [BoxShadow(color: bg.withOpacity(0.3), blurRadius: 30, spreadRadius: -8)] : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 20, color: fg),
+            const SizedBox(width: 8),
+            Text(text, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: fg)),
+          ],
+        ),
       ),
     );
   }

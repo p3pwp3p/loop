@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:loop_app/core/theme/app_colors.dart';
+import 'package:loop_app/core/theme/app_widgets.dart';
+
+/// 송금 비밀번호 (새 테마). 6자리 입력 → 확인 시트 → transfer_point RPC.
+/// 비로그인 미리보기에서는 송금을 시뮬레이션한다.
 class TransferPasswordScreen extends StatefulWidget {
   final String recipientId;
   final String recipientName;
@@ -23,316 +28,222 @@ class TransferPasswordScreen extends StatefulWidget {
 }
 
 class _TransferPasswordScreenState extends State<TransferPasswordScreen> {
-  String _password = '';
-  bool _isLoading = false;
+  String _pin = '';
+  bool _busy = false;
 
-  // 숫자 입력 처리
-  void _onNumberTap(String number) {
-    if (_isLoading) return;
-    if (_password.length < 6) {
-      HapticFeedback.lightImpact(); // 가벼운 진동 피드백
-      setState(() {
-        _password += number;
-      });
-
-      // 6자리가 다 차면 자동으로 검증 시작
-      if (_password.length == 6) {
-        _verifyPassword();
-      }
-    }
+  void _digit(String n) {
+    if (_busy || _pin.length >= 6) return;
+    HapticFeedback.lightImpact();
+    setState(() => _pin += n);
+    if (_pin.length == 6) _verify();
   }
 
-  // 지우기 버튼 처리
-  void _onDeleteTap() {
-    if (_isLoading) return;
-    if (_password.isNotEmpty) {
-      HapticFeedback.lightImpact();
-      setState(() {
-        _password = _password.substring(0, _password.length - 1);
-      });
-    }
+  void _delete() {
+    if (_busy || _pin.isEmpty) return;
+    HapticFeedback.lightImpact();
+    setState(() => _pin = _pin.substring(0, _pin.length - 1));
   }
 
-  // 생체 인증 버튼 처리
-  void _onBiometricTap() {
-    HapticFeedback.mediumImpact();
-    // TODO: 실제 local_auth 패키지 연동 필요
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Face ID / 지문 인증을 시도합니다.')),
-    );
+  Future<void> _verify() async {
+    setState(() => _busy = true);
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _pin = '';
+    });
+    _showConfirmSheet();
   }
 
-  // 비밀번호 검증 (임시)
-  Future<void> _verifyPassword() async {
-    setState(() => _isLoading = true);
-    
-    // 검증하는 척 딜레이
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      _showConfirmationSheet();
-    }
-  }
-
-  // 송금 확인 바텀시트 표시
-  void _showConfirmationSheet() {
-    final numberFormat = NumberFormat('#,###');
+  void _showConfirmSheet() {
+    final nf = NumberFormat('#,###');
     const fee = 500;
-    final totalAmount = widget.amount + fee;
+    final total = widget.amount + fee;
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF202025),
-      isScrollControlled: true, // 화면 높이에 따라 유동적으로 조절
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return SafeArea(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF0E0E12),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(top: BorderSide(color: Colors.white24, width: 0.5)),
+        ),
+        child: SafeArea(
+          top: false,
           child: Padding(
-            padding: const EdgeInsets.all(28.0),
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  '송금 정보를 확인해주세요',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                  textAlign: TextAlign.center,
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(2)),
+                  ),
                 ),
-                const Gap(32),
-                // 받는 사람 정보
+                const SizedBox(height: 28),
+                const Center(
+                  child: Text('송금 정보를 확인하세요',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
+                ),
+                const SizedBox(height: 28),
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: const Color(0xFF333338),
-                      child: Text(
-                        widget.recipientName[0],
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.cyan.withOpacity(0.12),
+                        border: Border.all(color: AppColors.cyan.withOpacity(0.2)),
                       ),
+                      alignment: Alignment.center,
+                      child: Text(widget.recipientName[0],
+                          style: const TextStyle(color: AppColors.cyan, fontSize: 18, fontWeight: FontWeight.bold)),
                     ),
-                    const Gap(16),
+                    const SizedBox(width: 14),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          widget.recipientName,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                        Text(
-                          '@${widget.recipientUsername}',
-                          style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                        ),
+                        Text(widget.recipientName,
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                        Text('@${widget.recipientUsername}',
+                            style: const TextStyle(color: AppColors.gray500, fontSize: 13)),
                       ],
                     ),
                   ],
                 ),
-                const Gap(32),
-                _buildInfoRow('보낼 금액', '${numberFormat.format(widget.amount)} Loopoint'),
-                const Gap(12),
-                _buildInfoRow('수수료', '${numberFormat.format(fee)} Loopoint'),
-                const Gap(24),
-                const Divider(color: Color(0xFF333338)),
-                const Gap(24),
-                _buildInfoRow('총 출금 금액', '${numberFormat.format(totalAmount)} Loopoint', isTotal: true),
-                const Gap(32),
-                ElevatedButton(
-                  onPressed: _processTransfer,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white, // 프리미엄 화이트
-                    foregroundColor: Colors.black, // 검은 글씨
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('보내기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
+                const SizedBox(height: 28),
+                _row('보낼 금액', '${nf.format(widget.amount)} LP'),
+                const SizedBox(height: 12),
+                _row('수수료', '${nf.format(fee)} LP'),
+                const SizedBox(height: 20),
+                const Divider(color: Colors.white12, height: 1),
+                const SizedBox(height: 20),
+                _row('총 출금', '${nf.format(total)} LP', total: true),
+                const SizedBox(height: 28),
+                LoopPrimaryButton(label: '보내기', onTap: _process),
               ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {bool isTotal = false}) {
+  Widget _row(String label, String value, {bool total = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 16)),
-        Text(
-          value,
-          style: TextStyle(
-            color: isTotal ? const Color(0xFF3182F6) : Colors.white,
-            fontSize: isTotal ? 20 : 16,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-          ),
-        ),
+        Text(label, style: const TextStyle(color: AppColors.gray400, fontSize: 15)),
+        Text(value,
+            style: TextStyle(
+              color: total ? AppColors.cyan : Colors.white,
+              fontSize: total ? 19 : 15,
+              fontWeight: total ? FontWeight.bold : FontWeight.w500,
+            )),
       ],
     );
   }
 
-  // 실제 송금 처리 (DB 연동)
-  Future<void> _processTransfer() async {
+  Future<void> _process() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    Navigator.of(context).pop(); // 시트 닫기
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.cyan)),
+    );
     try {
-      // 로딩 표시 (바텀시트 닫지 않고 버튼만 비활성화하거나, 로딩 다이얼로그 표시 등)
-      // 여기서는 간단히 진행
-      Navigator.of(context).pop(); // 바텀시트 닫기
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+      if (user == null) {
+        await Future.delayed(const Duration(milliseconds: 700)); // 미리보기 시뮬레이션
+      } else {
+        await Supabase.instance.client.rpc('transfer_point', params: {
+          'recipient_id': widget.recipientId,
+          'amount': widget.amount,
+          'description': widget.recipientName,
+        });
+      }
+      if (!mounted) return;
+      Navigator.of(context).pop(); // 로딩 닫기
+      Navigator.of(context).popUntil((r) => r.isFirst);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('송금이 완료되었어요'),
+          backgroundColor: const Color(0xFF0E0E12),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
       );
-
-      // Supabase RPC 호출 (안전한 트랜잭션 처리)
-      await Supabase.instance.client.rpc('transfer_point', params: {
-        'recipient_id': widget.recipientId,
-        'amount': widget.amount,
-        'description': widget.recipientName, // 거래 내역에 표시될 이름
-      });
-
-      if (mounted) {
-        Navigator.of(context).pop(); // 로딩 닫기
-        // 홈 화면으로 이동 (모든 스택 제거)
-        Navigator.of(context).popUntil((route) => route.isFirst);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('송금이 완료되었습니다!'),
-            backgroundColor: Color(0xFF3182F6),
-          ),
-        );
-      }
     } on PostgrestException catch (e) {
-      // DB 에러 발생 시 깔끔한 메시지만 표시 (예: "잔액이 부족합니다.")
-      if (mounted) {
-        Navigator.of(context).pop(); // 로딩 닫기
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-        );
-      }
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: AppColors.down),
+      );
     } catch (e) {
-      if (mounted) {
-        Navigator.of(context).pop(); // 로딩 닫기
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('송금 실패: ${e.toString()}'), backgroundColor: Colors.red),
-        );
-      }
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('송금 실패: $e'), backgroundColor: AppColors.down),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0), // [UI Update] 뒤로가기 버튼 여백 확보
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-            hoverColor: Colors.transparent,
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const Gap(40),
-            const Text(
-              '비밀번호를 입력해주세요',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            const Gap(40),
-            // 비밀번호 6자리 점 (Dots)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(6, (index) {
-                final isFilled = index < _password.length;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isFilled ? Colors.white : const Color(0xFF333338),
-                  ),
-                );
-              }),
-            ),
-            const Spacer(),
-            // 커스텀 키패드
-            _buildKeypad(),
-            const Gap(40),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildKeypad() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Column(
+      backgroundColor: AppColors.page,
+      body: Stack(
         children: [
-          _buildKeyRow(['1', '2', '3']),
-          const Gap(24),
-          _buildKeyRow(['4', '5', '6']),
-          const Gap(24),
-          _buildKeyRow(['7', '8', '9']),
-          const Gap(24),
-          _buildKeyRow(['bio', '0', 'del']),
+          const GlowBackground(),
+          Column(
+            children: [
+              LoopTopBar(leadingIcon: PhosphorIcons.caretLeft()),
+              const SizedBox(height: 24),
+              const Text('비밀번호를 입력하세요',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white)),
+              const SizedBox(height: 36),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(6, (i) {
+                  final filled = i < _pin.length;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    margin: const EdgeInsets.symmetric(horizontal: 9),
+                    width: 15,
+                    height: 15,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: filled ? AppColors.cyan : Colors.white.withOpacity(0.10),
+                      boxShadow: filled
+                          ? [BoxShadow(color: AppColors.cyan.withOpacity(0.5), blurRadius: 8)]
+                          : null,
+                    ),
+                  );
+                }),
+              ),
+              const Spacer(),
+              LoopKeypad(
+                onDigit: _digit,
+                onDelete: _delete,
+                biometric: true,
+                onBiometric: () {
+                  HapticFeedback.mediumImpact();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('생체 인증 (데모)')),
+                  );
+                },
+              ),
+              const SizedBox(height: 36),
+            ],
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildKeyRow(List<String> keys) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: keys.map((key) {
-        if (key == 'bio') {
-           return _buildIconKey(Icons.fingerprint, _onBiometricTap);
-        } else if (key == 'del') {
-           return _buildIconKey(Icons.backspace_outlined, _onDeleteTap);
-        } else {
-           return _buildNumberKey(key);
-        }
-      }).toList(),
-    );
-  }
-
-  Widget _buildNumberKey(String number) {
-    return GestureDetector(
-      onTap: () => _onNumberTap(number),
-      behavior: HitTestBehavior.translucent, // 터치 영역 확장
-      child: Container(
-        width: 80,
-        height: 80,
-        alignment: Alignment.center,
-        child: Text(
-          number,
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w500, color: Colors.white),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildIconKey(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.translucent,
-      child: Container(
-        width: 80,
-        height: 80,
-        alignment: Alignment.center,
-        child: Icon(icon, size: 28, color: Colors.white),
       ),
     );
   }
